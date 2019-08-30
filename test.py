@@ -19,11 +19,12 @@ ACCURACY = 2
 TESTS = 5
 CARD_COUNT = 4
 SEED = 1337
-TIMEOUT = 30  # Timeout in seconds
+TIMEOUT = 10
 
-DISPLAY_HEADER =  "Total Runs: {0} | {1}"
+DISPLAY_HEADER = "Total Runs: {0} | {1}"
 DISPLAY_DATA = "Guesses: Min {0} -- Avg {1:.2f} -- Max {2}   ||   Max Time {3:.2f}   ||   Quality : Min {4:.2f} -- Avg {5:.2f}"
 ROHYL_DISPLAY_DATA = "Average Guesses: {1:.2f} Average Quality: {4:.2f} Max Time: {3:.2f} Max Guesses: {2} Min Guesses: {0} Min Quality: {4:.2f}"
+
 
 class Logger:
     """
@@ -110,26 +111,35 @@ def runGuess(answer, logger, display=True):
             [3] - The time taken to execute
     """
     timeStarted = time.time()
-    output = subprocess.getoutput(["Proj1Test.exe"] + answer)
+    args = ["Proj1Test.exe"] + answer
     try:
         timeDelta = round(time.time() - timeStarted, ACCURACY)
+        output = subprocess.check_output(args, timeout=TIMEOUT).decode('utf-8')
         guesses = round(float(re.findall(GUESS_REGEX, output)[0]), ACCURACY)
         quality = round(float(re.findall(QUALITY_REGEX, output)[0]), ACCURACY)
         data = (answer, guesses, quality, timeDelta)
         logger.logSuccess(*data)
-
         # Summary so far
         if display:
             logger.summarise(data)
+    except subprocess.TimeoutExpired:
+        if display:
+            print(
+                f">> TIMEOUT ({TIMEOUT}s) OCCURRED WITH {answer}. Continuing with analysis\n")
+        # TODO: note that this input timed out
+        logger.logError(answer)
     except IndexError:
         # The program did not execute successfully.
         if display:
-            print(f">> ERROR OCCURRED WITH {answer}. Continuing with analysis\n")
+            print(
+                f">> ERROR OCCURRED WITH {answer}. Continuing with analysis\n")
         logger.logError(answer)
+
 
 def mean(numbers):
     # Returns the arithmetic mean
     return float(sum(numbers)) / max(len(numbers), 1)
+
 
 if __name__ == "__main__":
     random.seed(SEED)
