@@ -17,7 +17,7 @@ GUESS_REGEX = r"in (.*) guesses"
 QUALITY_REGEX = r"Approximate quality = (.*)%"
 ACCURACY = 2
 TESTS = 5
-CARD_COUNT = 4
+CARD_COUNT = 2
 SEED = 1337
 TIMEOUT = 10
 COMPILE_TARGET = "Proj1Test"
@@ -126,11 +126,11 @@ def runGuess(answer, logger, display=True):
             [2] - The quality
             [3] - The time taken to execute
     """
-    timeStarted = time.time()
     args = [f"{COMPILE_TARGET}.exe"] + answer
     try:
-        timeDelta = round(time.time() - timeStarted, ACCURACY)
+        timeStarted = time.time()
         output = subprocess.check_output(args, timeout=TIMEOUT).decode('utf-8')
+        timeDelta = round(time.time() - timeStarted, ACCURACY)
         guesses = round(float(re.findall(GUESS_REGEX, output)[0]), ACCURACY)
         quality = round(float(re.findall(QUALITY_REGEX, output)[0]), ACCURACY)
         data = (answer, guesses, quality, timeDelta)
