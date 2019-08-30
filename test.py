@@ -20,6 +20,7 @@ TESTS = 5
 CARD_COUNT = 4
 SEED = 1337
 TIMEOUT = 10
+COMPILE_TARGET = "Proj1Test"
 
 DISPLAY_HEADER = "Total Runs: {0} | {1}"
 DISPLAY_DATA = "Guesses: Min {0} -- Avg {1:.2f} -- Max {2}   ||   Max Time {3:.2f}   ||   Quality : Min {4:.2f} -- Avg {5:.2f}"
@@ -75,7 +76,7 @@ class Logger:
 
     def finalOutput(self):
         totalTime = sum(map(lambda x: x[4], self.data))
-        print(f"Completed in {totalTime:.2f} seconds.")
+        print(f"Completed in {totalTime:.2f} seconds with seed: {SEED}.")
 
         if len(self.erroneousInputs) > 0:
             print("Answers that were failed: ")
@@ -86,9 +87,11 @@ class Logger:
 
 
 def compile(optimisation=True):
+    print(f"Compiling {COMPILE_TARGET}...", end="")
     optimisationArg = "-O2" if optimisation else ""
-    args = f"ghc {optimisationArg} --make Proj1Test"
-    subprocess.getoutput(args)
+    args = f"ghc {optimisationArg} --make {COMPILE_TARGET}"
+    subprocess.call(args)
+    print("Done")
 
 
 def cardSpace():
@@ -124,7 +127,7 @@ def runGuess(answer, logger, display=True):
             [3] - The time taken to execute
     """
     timeStarted = time.time()
-    args = ["Proj1Test.exe"] + answer
+    args = [f"{COMPILE_TARGET}.exe"] + answer
     try:
         timeDelta = round(time.time() - timeStarted, ACCURACY)
         output = subprocess.check_output(args, timeout=TIMEOUT).decode('utf-8')
@@ -156,14 +159,14 @@ def mean(numbers):
 
 if __name__ == "__main__":
     compile()
-    # random.seed(SEED)
+    random.seed(SEED)
     logger = Logger()
 
-    # # Generate appropriate number of test cases
-    # cases = [randomCardList(CARD_COUNT) for _ in range(TESTS)]
+    # Generate appropriate number of test cases
+    cases = [randomCardList(CARD_COUNT) for _ in range(TESTS)]
 
-    # # Run tests and collate results (side-effect of displaying data)
-    # for answer in cases:
-    #     runGuess(answer, logger)
+    # Run tests and collate results (side-effect of displaying data)
+    for answer in cases:
+        runGuess(answer, logger)
 
     logger.finalOutput()
