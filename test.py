@@ -46,33 +46,37 @@ class Logger:
     def logError(self, cardInput):
         """Store the data for an error that has occurred."""
         self.erroneousInputs.append(cardInput)
-    
-    def logSuccess(self, cardInput, guessCount, guessQuality, guessTime): 
+
+    def logSuccess(self, cardInput, guessCount, guessQuality, guessTime):
         """Append data of a successful test to the dataframe."""
-        self.data.append([cardInput, len(cardInput), guessCount, guessQuality, guessTime])
-    
+        self.data.append([cardInput, len(cardInput),
+                          guessCount, guessQuality, guessTime])
+
     def summarise(self, data=None):
         """Calculates and displays desired fields to summarise data.
 
         Arguments:
-            data [abstract] -- Will be printed if passed, e.g. the actual card state        
+            data [abstract] -- Will be printed if passed, e.g. the actual card state
         """
 
-        df = DataFrame(self.data, columns=["Answer", "cardCount", "Guesses", "Quality", "TimeTaken"])
+        df = DataFrame(self.data, columns=[
+                       "Answer", "cardCount", "Guesses", "Quality", "TimeTaken"])
         numericData = df[["Guesses", "Quality", "TimeTaken"]]
-        totalRuns = len(df)        
-        averageGuess, averageQuality = numericData.agg(mean)[["Guesses", "Quality"]]
+        totalRuns = len(df)
+        averageGuess, averageQuality = numericData.agg(
+            mean)[["Guesses", "Quality"]]
         maxTime, maxGuess = numericData.max()[["TimeTaken", "Guesses"]]
         minGuess, minQuality = numericData.min()[["Guesses", "Quality"]]
 
         # Display data
         print(DISPLAY_HEADER.format(totalRuns, (data if not None else "")))
-        print(ROHYL_DISPLAY_DATA.format(minGuess, averageGuess, maxGuess, maxTime, minQuality, averageQuality))
-    
+        print(DISPLAY_DATA.format(minGuess, averageGuess,
+                                  maxGuess, maxTime, minQuality, averageQuality))
+
     def finalOutput(self):
-        totalTime = sum(map(lambda x : x[4], self.data))
+        totalTime = sum(map(lambda x: x[4], self.data))
         print(f"Completed in {totalTime:.2f} seconds.")
-        
+
         if len(self.erroneousInputs) > 0:
             print("Answers that were failed: ")
             for answer in self.erroneousInputs:
@@ -80,19 +84,28 @@ class Logger:
         else:
             print("No errors were encountered!")
 
+
+def compile(optimisation=True):
+    optimisationArg = "-O2" if optimisation else ""
+    args = f"ghc {optimisationArg} --make Proj1Test"
+    subprocess.getoutput(args)
+
+
 def cardSpace():
     """Generates all possible cards in a standard deck of 52 cards.
 
     Returns: [String] - the deck of cards in str representation.
-    
+
     """
     suitchars = "CDHS"
     rankchars = "23456789TJQKA"
     return [x+y for x in rankchars for y in suitchars]
 
+
 def randomCardList(cardCount):
     """Returns a list of random, unique playing cards"""
     return random.sample(cardSpace(), k=cardCount)
+
 
 def runGuess(answer, logger, display=True):
     """Executes Proj1Test for a given guess.
@@ -103,7 +116,7 @@ def runGuess(answer, logger, display=True):
         display {Boolean=True} -- Controls whether results are printed.
 
     Returns:
-        [([String], float, float, float, float)] -- Tuple containing the 
+        [([String], float, float, float, float)] -- Tuple containing the
         following information (in order) about the run:
             [0] - The cards used
             [1] - The number of guesses made
@@ -142,14 +155,15 @@ def mean(numbers):
 
 
 if __name__ == "__main__":
-    random.seed(SEED)
+    compile()
+    # random.seed(SEED)
     logger = Logger()
 
-    # Generate appropriate number of test cases
-    cases = [randomCardList(CARD_COUNT) for _ in range(TESTS)]
+    # # Generate appropriate number of test cases
+    # cases = [randomCardList(CARD_COUNT) for _ in range(TESTS)]
 
-    # Run tests and collate results (side-effect of displaying data)
-    for answer in cases:
-        runGuess(answer, logger)
-    
+    # # Run tests and collate results (side-effect of displaying data)
+    # for answer in cases:
+    #     runGuess(answer, logger)
+
     logger.finalOutput()
