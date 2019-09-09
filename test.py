@@ -1,7 +1,7 @@
 """
 :name: test.py
-:author: Rohyl Joshi, Callum Holmes
-:purpose: Testing of Project 1 executables for performance with 
+:author: Rohyl Joshi, Callum Holmes, Shevon Mendis
+:purpose: Testing of Project 1 executables for performance with
           randomised card selection and data collation.
 """
 
@@ -16,16 +16,14 @@ import sys
 GUESS_REGEX = r"in (.*) guesses"
 QUALITY_REGEX = r"Approximate quality = (.*)%"
 ACCURACY = 2
-TESTS = 5
-CARD_COUNT = 2
+TESTS = 7
+CARD_COUNT = 4
 SEED = 1337
 TIMEOUT = 10
-COMPILE_TARGET = "Proj1Test"
+COMPILE_TARGET = "Proj1test"
 
-DISPLAY_HEADER = "Total Runs: {0} | {1}"
-DISPLAY_DATA = "Guesses: Min {0} -- Avg {1:.2f} -- Max {2}   ||   Max Time {3:.2f}   ||   Quality : Min {4:.2f} -- Avg {5:.2f}"
-ROHYL_DISPLAY_DATA = "Average Guesses: {1:.2f} Average Quality: {4:.2f} Max Time: {3:.2f} Max Guesses: {2} Min Guesses: {0} Min Quality: {4:.2f}"
-
+SINGLE_TEST_SUMMARY = ">> Results: No. of Guesses: {1} | Quality: {2} | Execution Time: {3}s\n"
+OVERALL_SUMMARY = "== Metrics ==\n\nGUESSES:\nMin: {0}\nMax: {1}\nAvg: {2:.2f}\n\nTIME:\nMin: {3:.2f}\nMax: {4:.2f}\nAvg: {5:.2f}\n\nQUALITY:\nMin: {6:.2f}\nMax: {7:.2f}\nAvg: {8:.2f}\n\n============="
 
 class Logger:
     """
@@ -36,7 +34,7 @@ class Logger:
         logError -- For storing data pertaining to failed tests
         logSuccess -- For storing data from successful tests
         summarise -- For collating and displaying test data
-        finalOutput -- Any final data displays desired 
+        finalOutput -- Any final data displays desired
     """
 
     def __init__(self):
@@ -44,16 +42,16 @@ class Logger:
         self.data = list()
         self.erroneousInputs = list()
 
-    def logError(self, cardInput):
+    def logError(self, test_no, cardInput):
         """Store the data for an error that has occurred."""
-        self.erroneousInputs.append(cardInput)
+        self.erroneousInputs.append((test_no, cardInput))
 
     def logSuccess(self, cardInput, guessCount, guessQuality, guessTime):
         """Append data of a successful test to the dataframe."""
         self.data.append([cardInput, len(cardInput),
                           guessCount, guessQuality, guessTime])
 
-    def summarise(self, data=None):
+    def summarise(self, data):
         """Calculates and displays desired fields to summarise data.
 
         Arguments:
@@ -63,36 +61,60 @@ class Logger:
         df = DataFrame(self.data, columns=[
                        "Answer", "cardCount", "Guesses", "Quality", "TimeTaken"])
         numericData = df[["Guesses", "Quality", "TimeTaken"]]
-        totalRuns = len(df)
-        averageGuess, averageQuality = numericData.agg(
-            mean)[["Guesses", "Quality"]]
-        maxTime, maxGuess = numericData.max()[["TimeTaken", "Guesses"]]
-        minGuess, minQuality = numericData.min()[["Guesses", "Quality"]]
+        totalTests = len(df)
 
-        # Display data
-        print(DISPLAY_HEADER.format(totalRuns, (data if not None else "")))
-        print(DISPLAY_DATA.format(minGuess, averageGuess,
-                                  maxGuess, maxTime, minQuality, averageQuality))
+        # extract log data
+        self.averageGuess, self.averageQuality, self.averageTime = numericData.agg(mean)[["Guesses", "Quality", "TimeTaken"]]
+        self.maxTime, self.maxGuess, self.maxQuality = numericData.max()[["TimeTaken", "Guesses", "Quality"]]
+        self.minTime, self.minGuess, self.minQuality = numericData.min()[["TimeTaken", "Guesses", "Quality"]]
+
+        # Display test summary
+        print(SINGLE_TEST_SUMMARY.format(totalTests, data[1], data[2], data[3]))
 
     def finalOutput(self):
+        print("============= Testing Summary =============\n")
+
         totalTime = sum(map(lambda x: x[4], self.data))
         print(f"Completed in {totalTime:.2f} seconds with seed: {SEED}.")
 
         if len(self.erroneousInputs) > 0:
-            print("Answers that were failed: ")
-            for answer in self.erroneousInputs:
-                print(answer)
+            print("\nTest Cases that failed: \n")
+            for test_no, answer in self.erroneousInputs:
+                cards = ""
+                for card in answer:
+                    cards += f"'{card}' "
+                print(f" - Test #{test_no}: {cards}")
+            print()
         else:
-            print("No errors were encountered!")
+            print("No errors were encountered! Well Done :)\n")
+
+        print(OVERALL_SUMMARY.format(self.minGuess, self.maxGuess,
+                                     self.averageGuess, self.minTime,
+                                     self.maxTime, self.averageTime,
+                                     self.minQuality, self.maxQuality,
+                                     self.averageQuality))
+
+        print("\n===========================================")
 
 
 def compile(optimisation=True):
     print(f"Compiling {COMPILE_TARGET}...", end="")
     optimisationArg = "-O2" if optimisation else ""
     args = f"ghc {optimisationArg} --make {COMPILE_TARGET}"
-    subprocess.call(args)
-    print("Done")
 
+    # windows config
+    if sys.platform in ["win32", "cgywin"]:
+        status = subprocess.call(args);
+    # assuming that the only other OS being used to run this script is mac
+    else:
+        status = subprocess.call(args, shell=True)
+
+    # exit if code failed to compile
+    if status != 0:
+        print("Failed- please check your code!")
+        sys.exit()
+
+    print("Success\n")
 
 def cardSpace():
     """Generates all possible cards in a standard deck of 52 cards.
@@ -110,7 +132,7 @@ def randomCardList(cardCount):
     return random.sample(cardSpace(), k=cardCount)
 
 
-def runGuess(answer, logger, display=True):
+def runGuess(test_no, answer, logger, display=True):
     """Executes Proj1Test for a given guess.
 
     Arguments:
@@ -126,7 +148,22 @@ def runGuess(answer, logger, display=True):
             [2] - The quality
             [3] - The time taken to execute
     """
-    args = [f"{COMPILE_TARGET}.exe"] + answer
+
+    print(f"Test #{test_no}")
+
+    cards = ""
+    for card in answer:
+        cards += f"'{card}' "
+
+    print(f">> Running: ./{COMPILE_TARGET} {cards}")
+
+    # windows config
+    if sys.platform in ["win32", "cygwin"]:
+        args = [f"./{COMPILE_TARGET}.exe"] + answer
+    # assuming that the only other OS being used to run this script is mac
+    else:
+        args = [f"./{COMPILE_TARGET}"] + answer
+
     try:
         timeStarted = time.time()
         output = subprocess.check_output(args, timeout=TIMEOUT).decode('utf-8')
@@ -141,15 +178,15 @@ def runGuess(answer, logger, display=True):
     except subprocess.TimeoutExpired:
         if display:
             print(
-                f">> TIMEOUT ({TIMEOUT}s) OCCURRED WITH {answer}. Continuing with analysis\n")
+                f">> Results: TIMEOUT (>{TIMEOUT}s)\n")
         # TODO: note that this input timed out
-        logger.logError(answer)
+        logger.logError(test_no, answer)
     except IndexError:
         # The program did not execute successfully.
         if display:
             print(
                 f">> ERROR OCCURRED WITH {answer}. Continuing with analysis\n")
-        logger.logError(answer)
+        logger.logError(test_no, answer)
 
 
 def mean(numbers):
@@ -166,7 +203,9 @@ if __name__ == "__main__":
     cases = [randomCardList(CARD_COUNT) for _ in range(TESTS)]
 
     # Run tests and collate results (side-effect of displaying data)
-    for answer in cases:
-        runGuess(answer, logger)
+    print("Running Test Cases...\n")
+    for test_no, answer in enumerate(cases):
+        runGuess(test_no + 1, answer, logger)
+    print()
 
     logger.finalOutput()
