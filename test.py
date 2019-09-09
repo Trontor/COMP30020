@@ -78,7 +78,7 @@ class Logger:
 
     def finalOutput(self):
         print("============= Testing Summary =============\n")
-        print(f"Cards: {CARD_COUNT}\nTests:{TESTS}\nSeed:{SEED}\n")
+        print(f"Cards: {CARD_COUNT}\nTests: {TESTS}\nSeed: {SEED}\n")
 
         totalTime = sum(map(lambda x: x[4], self.data))
         print(f"Completed in {totalTime:.2f} seconds.")
