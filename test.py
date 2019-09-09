@@ -16,7 +16,7 @@ import sys
 GUESS_REGEX = r"in (.*) guesses"
 QUALITY_REGEX = r"Approximate quality = (.*)%"
 ACCURACY = 2
-TESTS = 7
+TESTS = 10
 CARD_COUNT = 4
 SEED = 1337
 TIMEOUT = 10
@@ -24,6 +24,7 @@ COMPILE_TARGET = "Proj1test"
 
 SINGLE_TEST_SUMMARY = ">> Results: No. of Guesses: {1} | Quality: {2} | Execution Time: {3}s\n"
 OVERALL_SUMMARY = "== Metrics ==\n\nGUESSES:\nMin: {0}\nMax: {1}\nAvg: {2:.2f}\n\nTIME:\nMin: {3:.2f}\nMax: {4:.2f}\nAvg: {5:.2f}\n\nQUALITY:\nMin: {6:.2f}\nMax: {7:.2f}\nAvg: {8:.2f}\n\n============="
+
 
 class Logger:
     """
@@ -64,18 +65,23 @@ class Logger:
         totalTests = len(df)
 
         # extract log data
-        self.averageGuess, self.averageQuality, self.averageTime = numericData.agg(mean)[["Guesses", "Quality", "TimeTaken"]]
-        self.maxTime, self.maxGuess, self.maxQuality = numericData.max()[["TimeTaken", "Guesses", "Quality"]]
-        self.minTime, self.minGuess, self.minQuality = numericData.min()[["TimeTaken", "Guesses", "Quality"]]
+        self.averageGuess, self.averageQuality, self.averageTime = numericData.agg(
+            mean)[["Guesses", "Quality", "TimeTaken"]]
+        self.maxTime, self.maxGuess, self.maxQuality = numericData.max()[
+            ["TimeTaken", "Guesses", "Quality"]]
+        self.minTime, self.minGuess, self.minQuality = numericData.min()[
+            ["TimeTaken", "Guesses", "Quality"]]
 
         # Display test summary
-        print(SINGLE_TEST_SUMMARY.format(totalTests, data[1], data[2], data[3]))
+        print(SINGLE_TEST_SUMMARY.format(
+            totalTests, data[1], data[2], data[3]))
 
     def finalOutput(self):
         print("============= Testing Summary =============\n")
+        print(f"Cards: {CARD_COUNT}\nTests:{TESTS}\nSeed:{SEED}\n")
 
         totalTime = sum(map(lambda x: x[4], self.data))
-        print(f"Completed in {totalTime:.2f} seconds with seed: {SEED}.")
+        print(f"Completed in {totalTime:.2f} seconds.")
 
         if len(self.erroneousInputs) > 0:
             print("\nTest Cases that failed: \n")
@@ -104,7 +110,7 @@ def compile(optimisation=True):
 
     # windows config
     if sys.platform in ["win32", "cgywin"]:
-        status = subprocess.call(args);
+        status = subprocess.call(args)
     # assuming that the only other OS being used to run this script is mac
     else:
         status = subprocess.call(args, shell=True)
@@ -115,6 +121,7 @@ def compile(optimisation=True):
         sys.exit()
 
     print("Success\n")
+
 
 def cardSpace():
     """Generates all possible cards in a standard deck of 52 cards.
@@ -167,6 +174,8 @@ def runGuess(test_no, answer, logger, display=True):
     try:
         timeStarted = time.time()
         output = subprocess.check_output(args, timeout=TIMEOUT).decode('utf-8')
+        # Uncomment to see the output of the Proj1Test script
+        # print(output)
         timeDelta = round(time.time() - timeStarted, ACCURACY)
         guesses = round(float(re.findall(GUESS_REGEX, output)[0]), ACCURACY)
         quality = round(float(re.findall(QUALITY_REGEX, output)[0]), ACCURACY)
