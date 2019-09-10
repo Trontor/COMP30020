@@ -11,6 +11,7 @@ import subprocess
 import os
 import re
 import time
+import datetime as dt
 import sys
 
 GUESS_REGEX = r"in (.*) guesses"
@@ -18,12 +19,13 @@ QUALITY_REGEX = r"Approximate quality = (.*)%"
 ACCURACY = 2
 TESTS = 5
 CARD_COUNT = 4
+TESTS = 500
+CARD_COUNT = 2
 SEED = 1337
 TIMEOUT = 30  # Timeout in seconds
 
-DISPLAY_HEADER =  "Total Runs: {0} | {1}"
-DISPLAY_DATA = "Guesses: Min {0} -- Avg {1:.2f} -- Max {2}   ||   Max Time {3:.2f}   ||   Quality : Min {4:.2f} -- Avg {5:.2f}"
-ROHYL_DISPLAY_DATA = "Average Guesses: {1:.2f} Average Quality: {4:.2f} Max Time: {3:.2f} Max Guesses: {2} Min Guesses: {0} Min Quality: {4:.2f}"
+DISPLAY_HEADER =  "Total Runs: {0} | {1} | "
+DISPLAY_DATA = "Guesses: Min {0} - Avg {1:.2f} - Max {2}  ||  Max Time {3:.2f}  ||  Quality: Min {4:.2f} - Avg {5:.2f}"
 
 class Logger:
     """
@@ -41,6 +43,12 @@ class Logger:
         # ["Answer", "cardCount", "Guesses", "Quality", "TimeTaken"]
         self.data = list()
         self.erroneousInputs = list()
+        self.printLog = ""
+
+    def logPrint(self, string):
+        """Logs something to be printed, as well as printing it."""
+        self.printLog += string + "\n"
+        print(string)
 
     def logError(self, cardInput):
         """Store the data for an error that has occurred."""
@@ -50,6 +58,9 @@ class Logger:
         """Append data of a successful test to the dataframe."""
         self.data.append([cardInput, len(cardInput), guessCount, guessQuality, guessTime])
     
+    def getDataFrame(self):
+        return DataFrame(self.data, columns=["Answer", "cardCount", "Guesses", "Quality", "TimeTaken"])
+
     def summarise(self, data=None):
         """Calculates and displays desired fields to summarise data.
 
@@ -57,7 +68,7 @@ class Logger:
             data [abstract] -- Will be printed if passed, e.g. the actual card state        
         """
 
-        df = DataFrame(self.data, columns=["Answer", "cardCount", "Guesses", "Quality", "TimeTaken"])
+        df = self.getDataFrame()
         numericData = df[["Guesses", "Quality", "TimeTaken"]]
         totalRuns = len(df)        
         averageGuess, averageQuality = numericData.agg(mean)[["Guesses", "Quality"]]
@@ -65,19 +76,50 @@ class Logger:
         minGuess, minQuality = numericData.min()[["Guesses", "Quality"]]
 
         # Display data
-        print(DISPLAY_HEADER.format(totalRuns, (data if not None else "")))
-        print(ROHYL_DISPLAY_DATA.format(minGuess, averageGuess, maxGuess, maxTime, minQuality, averageQuality))
+        header = DISPLAY_HEADER.format(totalRuns, (data if not None else ""))
+        data = DISPLAY_DATA.format(minGuess, averageGuess, maxGuess, maxTime, minQuality, averageQuality)
+        return header + data
     
     def finalOutput(self):
         totalTime = sum(map(lambda x : x[4], self.data))
-        print(f"Completed in {totalTime:.2f} seconds.")
+        self.logPrint(f"Completed in {totalTime:.2f} seconds.")
         
         if len(self.erroneousInputs) > 0:
-            print("Answers that were failed: ")
+            self.logPrint("Answers that were failed: ")
             for answer in self.erroneousInputs:
-                print(answer)
+                self.logPrint(answer)
         else:
-            print("No errors were encountered!")
+            self.logPrint("No errors were encountered!")
+        
+        # Report back distribution of quality, and 'worstcase' values
+        df = self.getDataFrame()
+        self.logPrint("\n" + self.summarise())
+        self.logPrint(f"\nYour distribution of Guesses:\n{df['Guesses'].value_counts().sort_index()}")
+        lower_thresh = 4
+        upper_thresh = 5
+        if len(df["Answer"][0]) <= 2:
+            thresh = lower_thresh
+        else:
+            thresh = upper_thresh
+
+        worstMeasurements = df.loc[df['Guesses'] > thresh, ["Answer", "Guesses", "Quality", "TimeTaken"]].sort_values(["Guesses"])
+        self.logPrint(f"\nYour worst measurements:\n{worstMeasurements}")
+    
+    def outputLog(self):
+        """Outputs a clean rundown of all data and results to a log file."""
+        time = dt.datetime.strftime(dt.datetime.now(), 'Log %Y-%m-%d -- %H-%M-%S')
+        name = input("Name tag for file >> ")
+        filename = f"Logs/{name}-{SEED}-{CARD_COUNT}-{TESTS}-{time}.txt"
+        header = f"|=== LOG FOR {time} ===|\n"
+        
+        # Open file
+        fyle = open(filename, "a")
+        fyle.write(header)
+        
+        fyle.write(self.printLog)
+        fyle.close()
+
+        print(f"\n>> Output execution to {filename}")
 
 def cardSpace():
     """Generates all possible cards in a standard deck of 52 cards.
@@ -120,11 +162,11 @@ def runGuess(answer, logger, display=True):
 
         # Summary so far
         if display:
-            logger.summarise(data)
+            print(logger.summarise(data))
     except IndexError:
         # The program did not execute successfully.
         if display:
-            print(f">> ERROR OCCURRED WITH {answer}. Continuing with analysis\n")
+            logger.logPrint(f">> ERROR OCCURRED WITH {answer}. Continuing with analysis\n")
         logger.logError(answer)
 
 def mean(numbers):
@@ -135,6 +177,8 @@ if __name__ == "__main__":
     random.seed(SEED)
     logger = Logger()
 
+    os.system("ghc -O2 --make Proj1Test")
+
     # Generate appropriate number of test cases
     cases = [randomCardList(CARD_COUNT) for _ in range(TESTS)]
 
@@ -143,3 +187,4 @@ if __name__ == "__main__":
         runGuess(answer, logger)
     
     logger.finalOutput()
+    logger.outputLog()
