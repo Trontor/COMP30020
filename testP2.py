@@ -31,7 +31,7 @@ import time
 
 SEED = 1337
 N_TESTS = 10
-TIMEOUT = 20
+TIMEOUT = 0.04
 TIME_ACCURACY = 2
 
 # Used when you request deterministic output
@@ -42,7 +42,7 @@ N_PARAMS = 7
 # The actual puzzles and param allocation will still be randomly generated.
 RANDOMISED_DIMENSIONS = False
 # Controls if you see the log printed out in terminal.
-VERBOSE = False
+VERBOSE = True
 
 OVERALL_BANNER = "\n============= Testing Summary =============\n"
 LINE_ONE = "Outcomes:\n- Correct\t {:3d} ({:5.2f}%)\n- Wrong #'s\t {:3d} ({:5.2f}%)\n- Null\t\t {:3d} ({:5.2f}%)\n"
@@ -92,7 +92,10 @@ class Logger:
         self.print_log = ""
 
     def outcome(self, puzzle, time, outcome):
-        self.print(f">> Logging as {outcome}")
+        if time >= TIMEOUT:
+            self.print(f">> {outcome} || TIMEOUT ({time})")
+        else:
+            self.print(f">> {outcome}")
         self.log_data.append([puzzle, time, outcome])
         self.log_len += 1
 
