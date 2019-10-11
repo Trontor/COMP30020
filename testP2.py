@@ -30,8 +30,8 @@ import re
 import time
 
 SEED = 1337
-N_TESTS = 10
-TIMEOUT = 0.04
+N_TESTS = 50
+TIMEOUT = 20
 TIME_ACCURACY = 2
 
 # Used when you request deterministic output
@@ -306,10 +306,11 @@ def valid_base(arr):
     :arr: the incomplete puzzle (inner values only) to test
     """
 
-    return all([sorted(list(x)) == list(set(x)) for x in arr] + \
-        [sorted(list(x)) == list(set(x)) for x in np.transpose(arr)]) and \
-        all(np.vectorize(lambda x: 0 < x < 10)(arr.flatten())) and \
-            1 == len(set(np.diag(arr)))
+    unique_row = all([len(set(x)) == 3 for x in arr])
+    unique_col = all([len(set(x)) == 3 for x in np.transpose(arr)])
+    good_vals = all(np.vectorize(lambda x: 0 < x < 10)(arr.flatten())) 
+    unique_diag = (1 == len(set(np.diag(arr))))
+    return unique_row and unique_col and good_vals and unique_diag
 
 if __name__ == "__main__":
     main()
