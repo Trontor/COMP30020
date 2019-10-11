@@ -43,6 +43,8 @@ N_PARAMS = 7
 RANDOMISED_DIMENSIONS = False
 # Controls if you see the log printed out in terminal.
 VERBOSE = True
+# Controls if you want to log output to a file.
+OUTPUT_LOG = True
 
 OVERALL_BANNER = "\n============= Testing Summary =============\n"
 LINE_ONE = "Outcomes:\n- Correct\t {:3d} ({:5.2f}%)\n- Wrong #'s\t {:3d} ({:5.2f}%)\n- Null\t\t {:3d} ({:5.2f}%)\n"
@@ -72,7 +74,8 @@ def main():
     
     # Summary
     logger.summarise()
-    logger.output()
+    if OUTPUT_LOG:
+        logger.output()
 
 class Logger:
     """
